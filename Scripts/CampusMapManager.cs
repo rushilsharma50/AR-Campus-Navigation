@@ -5,46 +5,45 @@ using Google.XR.ARCoreExtensions;
 public class CampusMapManager : MonoBehaviour
 {
     public AREarthManager EarthManager;
-    public List<CampusNode> allCampusNodes; // Your full database
-    private List<CampusNode> currentActivePath;
+    public List<CampusNode> AllCampusNodes; // Drag all your Node assets here
+    public GeospatialNavigationController NavDriver; // Link to Script 3
 
     public void CalculateNewRoute(string destinationName)
+{
+    var pose = EarthManager.CameraGeospatialPose;
+    CampusNode start = FindNearestNode(pose.Latitude, pose.Longitude);
+    CampusNode end = AllCampusNodes.Find(n => n.nodeName == destinationName);
+
+    if (start != null && end != null)
     {
-        var pose = EarthManager.CameraGeospatialPose;
-        CampusNode startNode = FindNearestNode(pose.Latitude, pose.Longitude);
-        CampusNode endNode = allCampusNodes.Find(n => n.nodeName == destinationName);
+        // Clear the old path and add your new start/end nodes to the controller's list
+        NavDriver.Waypoints.Clear();
+        
+        NavDriver.Waypoints.Add(new GPSWaypoint { Label = start.nodeName, Latitude = start.latitude, Longitude = start.longitude });
+        NavDriver.Waypoints.Add(new GPSWaypoint { Label = end.nodeName, Latitude = end.latitude, Longitude = end.longitude });
 
-        // Run Dijkstra/A* algorithm here
-        currentActivePath = Pathfinding.GetPath(startNode, endNode);
+        // Call the correct function name found in GeospatialNavigationController
+        NavDriver.StartNavigation(); 
     }
-
-    void Update()
-    {
-        if (currentActivePath == null || currentActivePath.Count == 0) return;
-
-        // Logic to point the arrow at currentActivePath[0]
-        // If distance < 5m, currentActivePath.RemoveAt(0)
-    }
+}
 
     private CampusNode FindNearestNode(double lat, double lon)
     {
         CampusNode nearest = null;
         double minDistance = double.MaxValue;
 
-        foreach (var node in allCampusNodes)
+        foreach (var node in AllCampusNodes)
         {
-            // Simple Pythagorean distance for nearby points
             double dLat = node.latitude - lat;
             double dLon = node.longitude - lon;
-            double distanceSq = dLat * dLat + dLon * dLon;
+            double distSq = dLat * dLat + dLon * dLon;
 
-            if (distanceSq < minDistance)
+            if (distSq < minDistance)
             {
-                minDistance = distanceSq;
+                minDistance = distSq;
                 nearest = node;
             }
         }
-
         return nearest;
     }
 }
